@@ -26,7 +26,9 @@ from efficientnet_pytorch import EfficientNet
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('data', metavar='DIR',
-                    help='path to dataset')
+                    help='path to dataset root')
+parser.add_argument('--dataset_name', required=True,
+                    help='dataset name')
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     help='model architecture (default: resnet18)')
 parser.add_argument('--num-classes', required=True, type=int,
@@ -85,10 +87,19 @@ writer = SummaryWriter()
 
 best_acc1 = 0
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, dataset_name, filename='checkpoint.pth.tar'):
+    models_save_dir = os.path.join('models', dataset_name)
+
+    if not os.path.exists(models_save_dir):
+        os.makedirs(models_save_dir)
+
+    checkpoint_save_path = os.path.join(models_save_dir, filename)
+    model_best_save_path = os.path.join(models_save_dir, 'model_best.pth.tar')
+
+    torch.save(state, checkpoint_save_path)
+
     if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+        shutil.copyfile(checkpoint_save_path, model_best_save_path)
 
 
 class AverageMeter(object):
@@ -364,7 +375,7 @@ def main_worker(gpu, ngpus_per_node, args):
     cudnn.benchmark = True
 
     # Data loading code
-    datadir = args.data
+    datadir = os.path.join(args.data, args.dataset_name)
     # traindir = os.path.join(args.data, 'train')
     # valdir = os.path.join(args.data, 'val')
     if args.advprop:
@@ -476,7 +487,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
-            }, is_best)
+            }, is_best, args.dataset_name)
 
 def main():
     args = parser.parse_args()
