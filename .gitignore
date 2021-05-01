@@ -1,3 +1,5 @@
 .idea/
+runs/
+
 model_best.pth.tar
 checkpoint.pth.tar

@@ -20,6 +20,7 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
+from torch.utils.tensorboard import SummaryWriter
 
 from efficientnet_pytorch import EfficientNet
 
@@ -79,6 +80,8 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'N processes per node, which has N GPUs. This is the '
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
+
+writer = SummaryWriter()
 
 best_acc1 = 0
 
@@ -181,9 +184,15 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 3))
+
         losses.update(loss.item(), images.size(0))
         top1.update(acc1[0], images.size(0))
         top5.update(acc5[0], images.size(0))
+
+        if (i % 10 == 0):
+            writer.add_scalar('TRAIN/acc1', acc1, i)
+            writer.add_scalar('TRAIN/acc5', acc5, i)
+            writer.add_scalar('TRAIN/loss', loss.item(), i)
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -196,6 +205,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         if i % args.print_freq == 0:
             progress.print(i)
+    
+    return top1.avg, top5.avg, losses.avg
 
 def validate(val_loader, model, criterion, args):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -222,6 +233,7 @@ def validate(val_loader, model, criterion, args):
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 3))
+
             losses.update(loss.item(), images.size(0))
             top1.update(acc1[0], images.size(0))
             top5.update(acc5[0], images.size(0))
@@ -237,7 +249,7 @@ def validate(val_loader, model, criterion, args):
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
 
-    return top1.avg
+    return top1.avg, top5.avg, losses.avg
 
 def test(val_loader, model, args):
     model.eval()
@@ -439,14 +451,22 @@ def main_worker(gpu, ngpus_per_node, args):
         adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, args)
+        acc1_train, acc5_train, loss_train = train(train_loader, model, criterion, optimizer, epoch, args)
+
+        writer.add_scalar('TRAIN/acc1', acc1_train, epoch)
+        writer.add_scalar('TRAIN/acc5', acc5_train, epoch)
+        writer.add_scalar('TRAIN/loss', loss_train, epoch)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
+        acc1_valid, acc5_valid, loss_valid = validate(val_loader, model, criterion, args)
+
+        writer.add_scalar('VALID/acc1', acc1_valid, epoch)
+        writer.add_scalar('VALID/acc5', acc5_valid, epoch)
+        writer.add_scalar('VALID/loss', loss_valid, epoch)
 
         # remember best acc@1 and save checkpoint
-        is_best = acc1 > best_acc1
-        best_acc1 = max(acc1, best_acc1)
+        is_best = acc1_valid > best_acc1
+        best_acc1 = max(acc1_valid, best_acc1)
 
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed
                 and args.rank % ngpus_per_node == 0):

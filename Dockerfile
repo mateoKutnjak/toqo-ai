@@ -37,6 +37,7 @@ RUN pip3 install \
         opencv-python \
         scikit-image==0.14.2 \
         tqdm \
+        tensorboard \
         efficientnet-pytorch
 
 RUN pip3 install \
