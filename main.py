@@ -526,5 +526,5 @@ def main():
 if __name__ == '__main__':
      main()
 
-# python3 main.py /dataset/zagreb/ --num-classes 30 --gpu 0 --lr 0.005 --arch efficientnet-b0 --batch-size 4 --pretrained
-# python3 main.py /dataset/zagreb/ --num-classes 30 --gpu 0 --lr 0.005 --arch efficientnet-b0 --batch-size 4 --pretrained --test --resume /code/model_best.pth.tar
+# python3 main.py /dataset/ --dataset_name zagreb --num-classes 30 --gpu 0 --lr 0.005 --arch efficientnet-b0 --batch-size 4 --pretrained
+# python3 main.py /dataset/ --dataset_name zagreb --num-classes 30 --gpu 0 --lr 0.005 --arch efficientnet-b0 --batch-size 4 --pretrained --test --resume /code/model_best.pth.tar
