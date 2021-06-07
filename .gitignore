@@ -1,5 +1,9 @@
 .idea/
 runs/
 
+models/
+models_old/
+outputs/
+
 model_best.pth.tar
 checkpoint.pth.tar

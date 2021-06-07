@@ -6,6 +6,7 @@ import shutil
 import time
 import warnings
 import PIL
+import json
 import matplotlib.pyplot as plt
 
 import torch
@@ -84,11 +85,15 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'multi node data parallel training')
 
 writer = SummaryWriter()
+start_time = time.time()
 
 best_acc1 = 0
 
 def save_checkpoint(state, is_best, dataset_name, filename='checkpoint.pth.tar'):
-    models_save_dir = os.path.join('models', dataset_name)
+    models_save_dir = os.path.join(
+        'outputs', 
+        dataset_name, 
+        time.strftime('%Y-%m-%d--%H-%M-%S', time.localtime(start_time)))
 
     if not os.path.exists(models_save_dir):
         os.makedirs(models_save_dir)
@@ -100,6 +105,25 @@ def save_checkpoint(state, is_best, dataset_name, filename='checkpoint.pth.tar')
 
     if is_best:
         shutil.copyfile(checkpoint_save_path, model_best_save_path)
+
+
+def write_labels_map(class_names, dataset_name, filename='label_map.json'):
+    output_save_dir = os.path.join(
+        'outputs', 
+        dataset_name, 
+        time.strftime('%Y-%m-%d--%H-%M-%S', time.localtime(start_time)))
+
+    if not os.path.exists(output_save_dir):
+        os.makedirs(output_save_dir)
+
+    label_map_save_path = os.path.join(output_save_dir, filename)
+
+    result = {}
+    for i, class_name in enumerate(class_names):
+        result[str(i)] = class_name
+
+    with open(label_map_save_path, 'w') as fp:
+        json.dump(result, fp)
 
 
 class AverageMeter(object):
@@ -397,6 +421,8 @@ def main_worker(gpu, ngpus_per_node, args):
             transforms.ToTensor(),
             normalize,
         ]))
+
+    write_labels_map(full_dataset.__dict__['classes'], args.dataset_name)
     
     train_size = int(0.8 * len(full_dataset))
     test_size = len(full_dataset) - train_size
